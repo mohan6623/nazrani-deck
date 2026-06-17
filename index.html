@@ -287,16 +287,16 @@
   <section class="slide">
     <div class="wrap">
       <div class="overline plan">01 &middot; CI/CD, proposed</div>
-      <h2>Choosing the registry: Google vs GHCR vs ECR</h2>
+      <h2>Choosing the registry: GHCR vs ECR</h2>
       <table>
-        <thead><tr><th></th><th>Google (GCR)</th><th>GHCR</th><th>Amazon ECR</th></tr></thead>
+        <thead><tr><th></th><th>GHCR</th><th>Amazon ECR</th></tr></thead>
         <tbody>
-          <tr><td class="k">Pulls to our EC2</td><td>cross-cloud, paid egress</td><td>small free tier, then billed</td><td><b>same region, free</b></td></tr>
-          <tr><td class="k">Auth on the box</td><td>GCP key (new secret)</td><td>GitHub token (new secret)</td><td><b>existing IAM role</b></td></tr>
-          <tr><td class="k">Ecosystem fit</td><td>a third cloud</td><td>where our CI runs</td><td><b>native to our AWS stack</b></td></tr>
+          <tr><td class="k">Pulls to our EC2</td><td>small free tier, then billed</td><td><b>same region, free</b></td></tr>
+          <tr><td class="k">Auth on the box</td><td>GitHub token (new secret)</td><td><b>existing IAM role</b></td></tr>
+          <tr><td class="k">Ecosystem fit</td><td>where our CI runs</td><td><b>native to our AWS stack</b></td></tr>
         </tbody>
       </table>
-      <div class="callout plan"><b>We chose ECR.</b> It is the only option where the EC2 pulls images for free (same region) and authenticates with the IAM role it already has. GHCR's free transfer is too small for repeated pulls, and Google would add a third cloud and another stored secret for no benefit.</div>
+      <div class="callout plan"><b>We chose ECR.</b> Both options work, but ECR is the only one where the EC2 pulls images for free (same region) and authenticates with the IAM role it already has. GHCR's free transfer allowance is too small for repeated pulls, after which every pull is billed and crosses the public internet.</div>
     </div>
   </section>
 
