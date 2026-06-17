@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Nazrani — Deployment Pipeline &amp; Cost Review</title>
+<style>
+  :root{
+    --ink:#0a0e13; --ink2:#0e141b; --surface:#141b24; --surface2:#1a232e;
+    --line:#26303d; --line2:#33404f;
+    --text:#eaf1f8; --muted:#93a4b6; --faint:#5e6e7e;
+    --live:#34d39a; --live-dim:#1c3b34;
+    --plan:#f3b14e; --plan-dim:#3c3019;
+    --ext:#6aa6e8; --ext-dim:#1d3146;
+    --danger:#ef7676;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "Consolas", "SF Mono", Menlo, monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1100px 600px at 12% -10%, rgba(52,211,154,.10), transparent 60%),
+      radial-gradient(900px 500px at 110% 110%, rgba(106,166,232,.08), transparent 55%),
+      var(--ink);
+    color:var(--text); font-family:var(--sans); overflow:hidden; -webkit-font-smoothing:antialiased;
+  }
+  body::before{content:""; position:fixed; inset:0; pointer-events:none; opacity:.35;
+    background-image:radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px); background-size:26px 26px;}
+
+  /* ---- invisible left/right navigation panels (behind content) ---- */
+  .navzone{position:fixed; top:0; bottom:0; width:50%; z-index:1; cursor:pointer; background:transparent}
+  .navzone.left{left:0} .navzone.right{right:0}
+
+  #deck{height:100vh; width:100vw; position:relative; z-index:2}
+  .slide{position:absolute; inset:0; display:none; flex-direction:column; justify-content:center; align-items:center;
+    padding:clamp(2.1rem,5.5vw,5rem); padding-bottom:6rem; animation:rise .42s cubic-bezier(.2,.7,.2,1);
+    pointer-events:none;}            /* clicks pass through empty areas to the nav panels */
+  .slide.active{display:flex}
+  @keyframes rise{from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none}}
+  .wrap{width:100%; max-width:1080px; margin:0 auto; pointer-events:auto;}  /* content catches and ignores its own clicks */
+
+  .overline{font:600 .76rem/1 var(--mono); letter-spacing:.22em; text-transform:uppercase; color:var(--live);
+    margin-bottom:1rem; display:flex; align-items:center; gap:.7rem;}
+  .overline::before{content:""; width:26px; height:2px; background:var(--live); display:inline-block}
+  .overline.plan{color:var(--plan)} .overline.plan::before{background:var(--plan)}
+  .overline.ext{color:var(--ext)} .overline.ext::before{background:var(--ext)}
+  h1{font-size:clamp(2rem,4.4vw,3.4rem); line-height:1.05; letter-spacing:-.02em; font-weight:760}
+  h2{font-size:clamp(1.4rem,3vw,2.4rem); line-height:1.1; letter-spacing:-.015em; font-weight:720; margin-bottom:.4rem}
+  .lead{color:var(--muted); font-size:clamp(.98rem,1.45vw,1.18rem); line-height:1.5; max-width:62ch; margin-top:.5rem}
+  .cap{color:var(--faint); font-size:.88rem; margin-top:1.2rem; max-width:76ch; line-height:1.5}
+  strong{color:var(--text); font-weight:680}
+  .mono{font-family:var(--mono)}
+  code{font-family:var(--mono); font-size:.85em; background:var(--ink2); border:1px solid var(--line); border-radius:6px; padding:.07em .4em; color:#cfe3f2}
+
+  /* cover + close: centered title layout */
+  .center{text-align:center} .center .overline{justify-content:center}
+  .cover{} .cover .brand{font:600 .85rem/1 var(--mono); letter-spacing:.34em; text-transform:uppercase; color:var(--faint); margin-bottom:1.7rem}
+  .cover h1{font-size:clamp(2.3rem,5.6vw,4.4rem); margin:0 auto; max-width:20ch}
+  .cover .sub{color:var(--muted); font-size:clamp(1.02rem,1.9vw,1.4rem); margin:1.1rem auto 0; max-width:46ch; line-height:1.45}
+  .cover .meta{margin-top:2.1rem; display:flex; gap:.6rem; flex-wrap:wrap; justify-content:center}
+  .cover .by{margin-top:1.8rem; color:var(--faint); font:500 .92rem/1 var(--mono); letter-spacing:.04em}
+
+  .pill{display:inline-flex; align-items:center; gap:.5rem; font:600 .75rem/1 var(--mono); letter-spacing:.04em;
+    padding:.48rem .78rem; border-radius:999px; border:1px solid var(--line2); color:var(--muted); white-space:nowrap}
+  .pill .dot{width:8px; height:8px; border-radius:50%; background:var(--faint)}
+  .pill.live{color:#bdeedd; border-color:var(--live-dim); background:rgba(52,211,154,.07)} .pill.live .dot{background:var(--live); box-shadow:0 0 10px var(--live)}
+  .pill.plan{color:#f3dcae; border-color:var(--plan-dim); background:rgba(243,177,78,.07)} .pill.plan .dot{background:var(--plan); box-shadow:0 0 10px var(--plan)}
+  .pill.ext{color:#c6def6; border-color:var(--ext-dim); background:rgba(106,166,232,.07)} .pill.ext .dot{background:var(--ext); box-shadow:0 0 10px var(--ext)}
+
+  /* agenda */
+  .agenda{display:flex; flex-direction:column; gap:.8rem; margin-top:1.4rem; counter-reset:ag}
+  .ag{display:flex; gap:1.1rem; align-items:center; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:1rem 1.25rem; text-align:left}
+  .ag::before{counter-increment:ag; content:counter(ag); width:2rem; height:2rem; flex:0 0 2rem; border-radius:50%;
+    border:1px solid var(--live-dim); color:var(--live); font:700 1rem/2rem var(--mono); text-align:center; background:rgba(52,211,154,.06)}
+  .ag b{font-size:1.08rem} .ag span{color:var(--muted); font-size:.9rem; display:block; margin-top:.12rem}
+
+  /* compare columns */
+  .cols{display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1.2rem; text-align:left}
+  .col{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:1.2rem 1.3rem}
+  .col h3{font:700 .8rem/1 var(--mono); letter-spacing:.12em; text-transform:uppercase; margin-bottom:.8rem; display:flex; align-items:center; gap:.55rem; justify-content:space-between}
+  .col .tag{font-size:.68rem; padding:.22rem .5rem; border-radius:999px; border:1px solid var(--line2); color:var(--muted); letter-spacing:.04em}
+  .col.pick{border-color:var(--live-dim); background:linear-gradient(180deg,rgba(52,211,154,.06),rgba(52,211,154,.01))} .col.pick h3{color:var(--live)}
+  .col.plan{border-color:var(--plan-dim); background:linear-gradient(180deg,rgba(243,177,78,.06),rgba(243,177,78,.01))} .col.plan h3{color:var(--plan)}
+  ul.clean{list-style:none; display:flex; flex-direction:column; gap:.5rem}
+  ul.clean li{position:relative; padding-left:1.35rem; color:var(--muted); line-height:1.4; font-size:.93rem}
+  ul.clean li::before{content:""; position:absolute; left:0; top:.5em; width:7px; height:7px; border-radius:50%; background:var(--live)}
+  ul.clean.plan li::before{background:var(--plan)}
+  ul.clean li b{color:var(--text)}
+
+  .bullets{margin-top:1.2rem; display:flex; flex-direction:column; gap:.65rem; max-width:72ch; text-align:left; margin-left:auto; margin-right:auto}
+  .bullets li{list-style:none; position:relative; padding-left:1.6rem; color:var(--muted); line-height:1.48; font-size:clamp(.96rem,1.35vw,1.1rem)}
+  .bullets li::before{content:""; position:absolute; left:0; top:.5em; width:9px; height:9px; border-radius:50%; background:var(--live); box-shadow:0 0 0 4px rgba(52,211,154,.1)}
+  .bullets.plan li::before{background:var(--plan); box-shadow:0 0 0 4px rgba(243,177,78,.1)}
+  .bullets li b{color:var(--text)}
+
+  .callout{margin-top:1.2rem; border-left:3px solid var(--live); background:var(--surface); padding:.9rem 1.15rem; border-radius:0 10px 10px 0; color:var(--muted); font-size:.95rem; line-height:1.5; text-align:left}
+  .callout.plan{border-left-color:var(--plan)} .callout.ask{border-left-color:var(--ext); background:rgba(106,166,232,.05)} .callout b{color:var(--text)}
+
+  /* CI/CD pipeline flow */
+  .flow{display:flex; align-items:stretch; gap:.35rem; flex-wrap:wrap; margin-top:1.1rem; justify-content:center}
+  .step{flex:1 1 130px; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:.75rem .8rem; min-width:0; border-top:2px solid var(--live); text-align:left}
+  .step .n{font:700 .68rem/1 var(--mono); color:var(--live); letter-spacing:.1em}
+  .step .s{font-weight:660; margin-top:.3rem; font-size:.92rem; line-height:1.2}
+  .step .x{color:var(--muted); font-size:.76rem; margin-top:.18rem; line-height:1.32}
+  .flow.plan .step{border-top-color:var(--plan)} .flow.plan .step .n{color:var(--plan)}
+  .arrowy{align-self:center; color:var(--faint); font-family:var(--mono)}
+
+  /* tables */
+  table{width:100%; border-collapse:collapse; margin-top:1rem; font-size:clamp(.84rem,1.2vw,1rem); text-align:left}
+  th,td{text-align:left; padding:.55rem .8rem; border-bottom:1px solid var(--line)}
+  th{font:700 .7rem/1 var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--faint)}
+  td.num{text-align:right; font-family:var(--mono); white-space:nowrap}
+  td b{color:var(--text)}
+  td.k{color:var(--live); font-weight:680; font-family:var(--mono); font-size:.9em; white-space:nowrap}
+  tr.sum td{border-top:2px solid var(--line2); font-weight:700}
+  .pos{color:var(--plan)} .neg{color:var(--live)} .zero{color:var(--live)}
+  .bar-td{width:30%} .bar{height:9px; background:var(--ink2); border-radius:6px; overflow:hidden; border:1px solid var(--line)}
+  .bar>i{display:block; height:100%; background:linear-gradient(90deg,var(--live),var(--ext))}
+  .group-label{font:600 .74rem/1 var(--mono); letter-spacing:.18em; text-transform:uppercase; color:var(--faint); margin:1.3rem 0 .2rem; text-align:left}
+
+  /* request-flow diagram */
+  .diagram{display:flex; flex-direction:column; align-items:center; gap:.45rem; margin-top:.7rem}
+  .netbar{width:100%; max-width:760px; text-align:center; background:var(--surface2); border:1px solid var(--live-dim); border-radius:12px; padding:.7rem 1rem}
+  .netbar b{color:var(--live); font-family:var(--mono); letter-spacing:.04em; font-size:.92rem}
+  .netbar span{display:block; color:var(--muted); font-size:.78rem; margin-top:.15rem}
+  .down{color:var(--faint); font-family:var(--mono); font-size:1.05rem; line-height:1; text-align:center}
+  .down small{font-size:.66rem; letter-spacing:.04em; display:block; margin-top:.08rem}
+  .node{background:var(--surface); border:1px solid var(--line); border-top:2px solid var(--live); border-radius:12px; padding:.75rem 1rem; text-align:center; min-width:185px}
+  .node.browser{border-top-color:var(--text)}
+  .node b{font-size:.98rem; display:block} .node span{color:var(--muted); font-size:.78rem; display:block; margin-top:.18rem; line-height:1.32}
+  .branch{display:flex; gap:clamp(1rem,5vw,3.2rem); align-items:flex-start; justify-content:center; flex-wrap:wrap}
+  .lane{display:flex; flex-direction:column; align-items:center; gap:.4rem}
+  .lane .tag{font:600 .7rem/1 var(--mono); letter-spacing:.05em; color:var(--faint)}
+
+  /* bottom chrome: brand, controls, progress */
+  .brandbar{position:fixed; left:clamp(1.2rem,4vw,2.4rem); bottom:1.2rem; color:var(--faint); font:500 .74rem/1 var(--mono); letter-spacing:.04em; z-index:10}
+  .controls{position:fixed; left:50%; transform:translateX(-50%); bottom:1rem; display:flex; align-items:center; gap:.55rem; z-index:10; pointer-events:auto}
+  .controls button{font:600 .82rem/1 var(--sans); color:var(--text); background:var(--surface); border:1px solid var(--line2);
+    border-radius:999px; padding:.62rem 1.15rem; cursor:pointer; transition:border-color .15s, color .15s, background .15s}
+  .controls button:hover:not(:disabled){border-color:var(--live); color:var(--live); background:var(--surface2)}
+  .controls button:disabled{opacity:.3; cursor:default}
+  .controls #counter{font:600 .78rem/1 var(--mono); color:var(--muted); min-width:3.6rem; text-align:center; letter-spacing:.06em}
+  .progress{position:fixed; left:0; bottom:0; height:3px; background:var(--line); width:100%; z-index:9}
+  #bar{height:100%; width:0; background:linear-gradient(90deg,var(--live),var(--ext)); transition:width .4s cubic-bezier(.2,.7,.2,1)}
+  .hint{position:fixed; top:1rem; right:1.2rem; color:var(--faint); font:500 .7rem/1 var(--mono); letter-spacing:.05em; z-index:10; opacity:.55}
+
+  @media (max-width:780px){.cols{grid-template-columns:1fr}}
+  @media print{body{overflow:visible; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+    .slide{display:flex !important; position:relative; inset:auto; height:100vh; page-break-after:always}
+    .brandbar,.controls,.progress,.hint,.navzone{display:none}}
+</style>
+</head>
+<body>
+
+<div class="navzone left" id="zoneL" aria-hidden="true"></div>
+<div class="navzone right" id="zoneR" aria-hidden="true"></div>
+<div class="hint">click sides or use buttons &middot; F = fullscreen</div>
+
+<main id="deck">
+
+  <!-- 1 COVER -->
+  <section class="slide cover center active">
+    <div class="wrap">
+      <div class="brand">SigNet Solutions &middot; Nazrani</div>
+      <h1>Deployment Pipeline &amp; Cost Review</h1>
+      <p class="sub">How we ship today, the Stage 2 upgrade, and what it costs to run.</p>
+      <div class="meta">
+        <span class="pill live"><span class="dot"></span>UAT live</span>
+        <span class="pill plan"><span class="dot"></span>Production next</span>
+        <span class="pill"><span class="dot"></span>ap-south-1 &middot; Mumbai</span>
+      </div>
+      <div class="by">Presented by Mohan &middot; 17 June 2026</div>
+    </div>
+  </section>
+
+  <!-- 2 CONTEXT / AGENDA -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="overline">Context</div>
+      <h2>Building on the architecture you set</h2>
+      <p class="lead">The move from managed services to a single self-hosted EC2 stack is already in place and working in UAT. This review covers the two things that are new since then.</p>
+      <div class="agenda">
+        <div class="ag"><div><b>CI/CD pipeline</b><span>How we deploy today, plus the Stage 2 upgrade I would like your approval on.</span></div></div>
+        <div class="ag"><div><b>Cost</b><span>What it runs at today, and the one optimisation on the table.</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 REQUEST FLOW -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="overline">Overview</div>
+      <h2>How a request flows</h2>
+      <div class="diagram">
+        <div class="netbar"><b>Amazon Route 53 &middot; DNS for nazrani.com</b><span>authority delegated from GoDaddy</span></div>
+        <div class="down">&darr;<small>resolves names</small></div>
+        <div class="node browser"><b>User's Browser</b><span>nazrani.com</span></div>
+        <div class="branch">
+          <div class="lane">
+            <div class="tag">loads the site</div><div class="down">&darr;</div>
+            <div class="node"><b>AWS Amplify</b><span>Next.js SSR + CloudFront CDN</span></div>
+          </div>
+          <div class="lane">
+            <div class="tag">calls the API</div><div class="down">&darr;</div>
+            <div class="node"><b>EC2 &middot; Mumbai</b><span>Caddy &rarr; FastAPI<br>Postgres &middot; Redis</span></div>
+            <div class="down">&darr;<small>product images</small></div>
+            <div class="node"><b>CloudFront &rarr; S3</b><span>private bucket, CDN served</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><strong>Two public doors.</strong> The browser loads the site from Amplify, and its JavaScript separately calls the API on the EC2. Route 53 directs both, and Caddy is the only service on the box facing the internet.</p>
+    </div>
+  </section>
+
+  <!-- 4 CI/CD OVERVIEW -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="overline ext">01 &middot; CI/CD</div>
+      <h2>How we ship: two stages</h2>
+      <div class="flow">
+        <div class="step"><div class="n">BRANCH</div><div class="s">feature</div><div class="x">work in isolation</div></div>
+        <div class="arrowy">&rsaquo;</div>
+        <div class="step"><div class="n">BRANCH</div><div class="s">develop</div><div class="x">integration, tests</div></div>
+        <div class="arrowy">&rsaquo;</div>
+        <div class="step"><div class="n">BRANCH</div><div class="s">staging</div><div class="x">deploys to UAT</div></div>
+        <div class="arrowy">&rsaquo;</div>
+        <div class="step"><div class="n">BRANCH</div><div class="s">main</div><div class="x">deploys to prod</div></div>
+      </div>
+      <ul class="bullets" style="margin-top:1.3rem">
+        <li><b>GitHub Actions</b> drives it. Tests run on develop and main; a push to <code>staging</code> triggers the UAT deploy.</li>
+        <li><b>Stage 1 (today):</b> the server builds the image itself on every deploy.</li>
+        <li><b>Stage 2 (proposed):</b> build the image once in CI and ship a versioned artifact. This is the upgrade I would like your steer on.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 4 STAGE 1 -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="overline">01 &middot; CI/CD, current</div>
+      <h2>Stage 1: push to deploy</h2>
+      <div class="flow">
+        <div class="step"><div class="n">1</div><div class="s">git push staging</div><div class="x">developer pushes</div></div>
+        <div class="arrowy">&rsaquo;</div>
+        <div class="step"><div class="n">2</div><div class="s">GitHub Actions</div><div class="x">SSH into the EC2</div></div>
+        <div class="arrowy">&rsaquo;</div>
+        <div class="step"><div class="n">3</div><div class="s">git reset --hard</div><div class="x">pull latest code</div></div>
+        <div class="arrowy">&rsaquo;</div>
+        <div class="step"><div class="n">4</div><div class="s">compose up --build</div><div class="x">rebuild on the box</div></div>
+      </div>
+      <div class="cols" style="margin-top:1.4rem">
+        <div class="col pick"><h3>Strengths</h3>
+          <ul class="clean"><li>Dead simple, <b>zero extra infrastructure</b></li><li>Fully automated on push</li><li>Already running, proven on UAT</li></ul>
+        </div>
+        <div class="col plan"><h3>Limits</h3>
+          <ul class="clean plan"><li><b>Builds on the server.</b> CPU spike and brief downtime each deploy</li><li><b>No versioned image.</b> Rollback means git revert plus rebuild</li><li>Build environment is the prod box (non-deterministic)</li></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 STAGE 2 MECHANICS -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="overline plan">01 &middot; CI/CD, proposed</div>
+      <h2>Stage 2: build once, ship an image</h2>
+      <div class="flow plan">
+        <div class="step"><div class="n">1</div><div class="s">git push</div><div class="x">developer pushes</div></div>
+        <div class="arrowy">&rsaquo;</div>
+        <div class="step"><div class="n">2</div><div class="s">Actions builds image</div><div class="x">tagged by git SHA</div></div>
+        <div class="arrowy">&rsaquo;</div>
+        <div class="step"><div class="n">3</div><div class="s">push to registry</div><div class="x">Amazon ECR</div></div>
+        <div class="arrowy">&rsaquo;</div>
+        <div class="step"><div class="n">4</div><div class="s">EC2 pulls tag</div><div class="x">compose pull, up -d</div></div>
+      </div>
+      <ul class="bullets plan" style="margin-top:1.3rem">
+        <li><b>No building on the prod box.</b> The box only pulls a ready image, so there is no CPU spike and no downtime blip.</li>
+        <li><b>Versioned, immutable images.</b> Rollback is re-deploying a previous tag in seconds, not a rebuild.</li>
+        <li><b>Build once, run the same artifact</b> in UAT and prod. Deterministic, with no "works on the box" surprises.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 6 STAGE 2 SERVICES + COST -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="overline plan">01 &middot; CI/CD, proposed</div>
+      <h2>Stage 2: the services, and what they cost</h2>
+      <table>
+        <thead><tr><th>Service</th><th>Role in Stage 2</th><th class="num">Cost at our scale</th></tr></thead>
+        <tbody>
+          <tr><td class="k">GitHub Actions</td><td>Builds and pushes the image (already in use today)</td><td class="num">about $0, free tier</td></tr>
+          <tr><td class="k">Amazon ECR</td><td>Stores the versioned images the EC2 pulls</td><td class="num">$0.10 to $0.50 / mo</td></tr>
+          <tr><td class="k">Image pulls</td><td>EC2 (ap-south-1) from ECR (ap-south-1)</td><td class="num">$0, same region</td></tr>
+          <tr class="sum"><td>Net new cost</td><td>vs. the rollback safety and zero downtime it buys</td><td class="num zero">about $1 / month</td></tr>
+        </tbody>
+      </table>
+      <div class="callout plan"><b>ECR vs GHCR:</b> GHCR's free tier is not enough for us. Pulling images down to the EC2 counts as data transfer out of GitHub, the free egress allowance is small, and once it is used up every pull is billed and travels across the public internet. <b>Amazon ECR</b> sits in the same region as the EC2, so pulls are free and fast, and the instance's existing <b>IAM role authenticates them</b> with no extra token to manage. That is why we go with ECR.</div>
+    </div>
+  </section>
+
+  <!-- 7 STAGE 1 vs 2 + ASK -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="overline plan">01 &middot; CI/CD, the ask</div>
+      <h2>Stage 1 to Stage 2 at a glance</h2>
+      <table>
+        <thead><tr><th></th><th>Stage 1, today</th><th>Stage 2, proposed</th></tr></thead>
+        <tbody>
+          <tr><td class="k">Image build</td><td>on the prod box</td><td><b>in CI (GitHub Actions)</b></td></tr>
+          <tr><td class="k">Deploy</td><td>git reset, then rebuild</td><td><b>pull a tested image</b></td></tr>
+          <tr><td class="k">Downtime</td><td>brief, every deploy</td><td><b>near zero</b></td></tr>
+          <tr><td class="k">Rollback</td><td>revert, then rebuild</td><td><b>redeploy a prior tag (seconds)</b></td></tr>
+          <tr><td class="k">New cost</td><td>none</td><td><b>about $1 / month (ECR)</b></td></tr>
+        </tbody>
+      </table>
+      <div class="callout ask"><b>The ask:</b> approval to adopt <b>Amazon ECR and Stage 2 before production</b>. It is a small, bounded cost that removes building on the prod box and gives us real rollback, which is exactly the safety we want before going live.</div>
+    </div>
+  </section>
+
+  <!-- 8 COST: NET VS GROSS -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="overline">02 &middot; Cost</div>
+      <h2>What it runs at: net vs gross</h2>
+      <table>
+        <thead><tr><th>June, month to date</th><th class="num">Amount</th><th class="bar-td"></th></tr></thead>
+        <tbody>
+          <tr><td>Gross <b>usage</b></td><td class="num pos">+ $40.50</td><td class="bar-td"></td></tr>
+          <tr><td><b>Credits</b> applied</td><td class="num neg">&minus; $40.50</td><td class="bar-td"></td></tr>
+          <tr class="sum"><td>Net, what leaves the account</td><td class="num zero">about $0.00</td><td class="bar-td"></td></tr>
+        </tbody>
+      </table>
+      <div class="group-label">Where the $40.50 of usage goes</div>
+      <table>
+        <tbody>
+          <tr><td><b>EC2 instance</b> <span class="mono" style="color:var(--faint)">c7i-flex.large</span></td><td class="num">$32.18</td><td class="bar-td"><div class="bar"><i style="width:79%"></i></div></td></tr>
+          <tr><td>EBS disk and Public IPv4</td><td class="num">$3.83</td><td class="bar-td"><div class="bar"><i style="width:10%"></i></div></td></tr>
+          <tr><td>Amplify, Route 53, S3, misc</td><td class="num">$4.49</td><td class="bar-td"><div class="bar"><i style="width:11%"></i></div></td></tr>
+        </tbody>
+      </table>
+      <p class="cap"><strong>Credits cover 100% of usage today,</strong> so net spend is about $0. The figure that matters long term is the gross run rate (about $70/mo all in), and one always-on instance is <strong>89%</strong> of it.</p>
+    </div>
+  </section>
+
+  <!-- 9 COST: THE LEVER -->
+  <!-- COST: WHY C7I -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="overline plan">02 &middot; Cost</div>
+      <h2>Why we are on c7i-flex.large</h2>
+      <div class="callout"><b>It was the available choice at launch.</b> When the instance was created, the cheaper burstable options were greyed out in the selection screen. <b>t4g.medium is ARM (Graviton)</b> and would not run our x86 image, and <b>t3.medium</b> was also unavailable in that flow. c7i-flex.large was the practical option left, so that is what we launched on.</div>
+      <ul class="bullets plan">
+        <li>The result is a <b>compute-optimised instance running a near-idle app</b>, which is why it is the single largest line on the bill.</li>
+        <li>It is <b>not locked in.</b> We can right-size on the existing box with the "Change instance type" action. The options and savings are on the next slide.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="wrap">
+      <div class="overline plan">02 &middot; Cost</div>
+      <h2>The one optimisation on the table</h2>
+      <div class="cols">
+        <div class="col pick"><h3>t3.medium <span class="tag">x86, in-place</span></h3>
+          <ul class="clean"><li>Same 4 GiB RAM, <b>burstable</b>, fits a near-idle app</li><li><b>About $30/mo, saves about $27 (47%)</b></li><li>In-place change, no rebuild, IP preserved</li></ul>
+        </div>
+        <div class="col plan"><h3>t4g.medium <span class="tag">ARM, later</span></h3>
+          <ul class="clean plan"><li>Cheapest. <b>About $16/mo, saves about $41 (72%)</b></li><li>Needs an arm64 image rebuild, a small migration</li><li>Best as a deliberate post-launch move</li></ul>
+        </div>
+      </div>
+      <div class="callout"><b>Why it matters:</b> net is $0 only while credits last. Right-sizing is a five-minute change that halves the biggest line, worth doing before credits expire and before prod. <em>(Open data point: credit balance and expiry, under Billing then Credits.)</em></div>
+    </div>
+  </section>
+
+  <!-- 11 DNS / ROUTE 53 -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="overline">DNS</div>
+      <h2>Why we moved DNS to Route 53</h2>
+      <div class="callout"><b>The blocker:</b> Amplify serves the site from a CloudFront address, so our root domain <code>nazrani.com</code> has to point at that address. At the apex you cannot use a CNAME, you need an <b>ALIAS record (also called ANAME)</b>. GoDaddy's DNS does not offer ALIAS or ANAME records at all, so it simply cannot point the root domain at Amplify. Route 53 supports ALIAS records, so it can. That is the concrete reason we moved.</div>
+      <ul class="bullets">
+        <li><b>Apex ALIAS records</b> map <code>nazrani.com</code> straight to Amplify and CloudFront, which GoDaddy cannot do.</li>
+        <li><b>Native integration</b> with Amplify and ACM: automatic DNS validation of our TLS certificates.</li>
+        <li><b>DNS as code:</b> managed by API and infrastructure-as-code, audited through CloudTrail and IAM.</li>
+        <li><b>One control plane:</b> DNS lives with the rest of the AWS stack, not in a separate vendor portal.</li>
+      </ul>
+      <p class="cap">The domain stays registered at GoDaddy. Only DNS authority moved to a Route 53 hosted zone, so this was low risk with no transfer.</p>
+    </div>
+  </section>
+
+  <!-- 12 CLOSE -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="overline">Close</div>
+      <h2>Where we are, and what I am asking</h2>
+      <div class="cols">
+        <div class="col pick">
+          <h3>Status today</h3>
+          <ul class="clean">
+            <li>UAT live and proven on the self-hosted stack</li>
+            <li>CI/CD Stage 1 automated and running</li>
+            <li>Net cost about $0 (under credits)</li>
+          </ul>
+        </div>
+        <div class="col plan">
+          <h3>For your steer</h3>
+          <ul class="clean plan">
+            <li>Approve <b>Stage 2 CI/CD</b> (ECR, about $1/mo) before prod</li>
+            <li><b>Right-size</b> the instance: now or post-launch?</li>
+            <li>Confirm credit runway (Billing, Credits)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout ask"><b>Bottom line:</b> UAT is live and proven, net cost is about $0 today, and we are ready for production pending your approval on Stage 2 and a steer on right-sizing.</div>
+    </div>
+  </section>
+
+</main>
+
+<div class="brandbar">Nazrani &middot; Deployment &amp; Cost Review</div>
+<nav class="controls">
+  <button id="prev" type="button" aria-label="Previous slide">&lsaquo; Prev</button>
+  <span id="counter">1 / 13</span>
+  <button id="next" type="button" aria-label="Next slide">Next &rsaquo;</button>
+</nav>
+<div class="progress"><div id="bar"></div></div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const total=slides.length;
+  const counter=document.getElementById('counter'), bar=document.getElementById('bar');
+  const prevBtn=document.getElementById('prev'), nextBtn=document.getElementById('next');
+  let i=0;
+  function show(n){
+    i=Math.max(0,Math.min(total-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    counter.textContent=(i+1)+' / '+total;
+    bar.style.width=((i+1)/total*100)+'%';
+    prevBtn.disabled=(i===0);
+    nextBtn.disabled=(i===total-1);
+    history.replaceState(null,'','#'+(i+1));
+  }
+  const next=()=>show(i+1), prev=()=>show(i-1);
+
+  prevBtn.addEventListener('click', prev);
+  nextBtn.addEventListener('click', next);
+  document.getElementById('zoneL').addEventListener('click', prev);
+  document.getElementById('zoneR').addEventListener('click', next);
+
+  addEventListener('keydown', e=>{
+    if(['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault(); next();}
+    else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault(); prev();}
+    else if(e.key==='Home'){show(0);} else if(e.key==='End'){show(total-1);}
+    else if(e.key==='f'||e.key==='F'){document.fullscreenElement?document.exitFullscreen?.():document.documentElement.requestFullscreen?.();}
+  });
+  let tx=0;
+  addEventListener('touchstart', e=>tx=e.changedTouches[0].clientX, {passive:true});
+  addEventListener('touchend', e=>{const dx=e.changedTouches[0].clientX-tx; if(Math.abs(dx)>45){dx<0?next():prev();}}, {passive:true});
+
+  show((parseInt(location.hash.replace('#',''))||1)-1);
+</script>
+</body>
+</html>
