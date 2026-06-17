@@ -283,21 +283,64 @@
     </div>
   </section>
 
-  <!-- 6 STAGE 2 SERVICES + COST -->
+  <!-- 6a STAGE 2 REGISTRY CHOICE -->
   <section class="slide">
     <div class="wrap">
       <div class="overline plan">01 &middot; CI/CD, proposed</div>
-      <h2>Stage 2: the services, and what they cost</h2>
+      <h2>Choosing the registry: Google vs GHCR vs ECR</h2>
       <table>
-        <thead><tr><th>Service</th><th>Role in Stage 2</th><th class="num">Cost at our scale</th></tr></thead>
+        <thead><tr><th></th><th>Google (GCR)</th><th>GHCR</th><th>Amazon ECR</th></tr></thead>
         <tbody>
-          <tr><td class="k">GitHub Actions</td><td>Builds and pushes the image (already in use today)</td><td class="num">about $0, free tier</td></tr>
-          <tr><td class="k">Amazon ECR</td><td>Stores the versioned images the EC2 pulls</td><td class="num">$0.10 to $0.50 / mo</td></tr>
-          <tr><td class="k">Image pulls</td><td>EC2 (ap-south-1) from ECR (ap-south-1)</td><td class="num">$0, same region</td></tr>
-          <tr class="sum"><td>Net new cost</td><td>vs. the rollback safety and zero downtime it buys</td><td class="num zero">about $1 / month</td></tr>
+          <tr><td class="k">Pulls to our EC2</td><td>cross-cloud, paid egress</td><td>small free tier, then billed</td><td><b>same region, free</b></td></tr>
+          <tr><td class="k">Auth on the box</td><td>GCP key (new secret)</td><td>GitHub token (new secret)</td><td><b>existing IAM role</b></td></tr>
+          <tr><td class="k">Ecosystem fit</td><td>a third cloud</td><td>where our CI runs</td><td><b>native to our AWS stack</b></td></tr>
         </tbody>
       </table>
-      <div class="callout plan"><b>ECR vs GHCR:</b> GHCR's free tier is not enough for us. Pulling images down to the EC2 counts as data transfer out of GitHub, the free egress allowance is small, and once it is used up every pull is billed and travels across the public internet. <b>Amazon ECR</b> sits in the same region as the EC2, so pulls are free and fast, and the instance's existing <b>IAM role authenticates them</b> with no extra token to manage. That is why we go with ECR.</div>
+      <div class="callout plan"><b>We chose ECR.</b> It is the only option where the EC2 pulls images for free (same region) and authenticates with the IAM role it already has. GHCR's free transfer is too small for repeated pulls, and Google would add a third cloud and another stored secret for no benefit.</div>
+    </div>
+  </section>
+
+  <!-- 6b STAGE 2 COST BREAKDOWN -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="overline plan">01 &middot; CI/CD, proposed</div>
+      <h2>Stage 2 cost, broken down</h2>
+      <table>
+        <thead><tr><th>Item</th><th>Rate</th><th class="num">Our usage / mo</th></tr></thead>
+        <tbody>
+          <tr><td class="k">GitHub Actions</td><td>2,000 free minutes, then $0.008 / min</td><td class="num">a few builds, ~free</td></tr>
+          <tr><td class="k">ECR storage</td><td>$0.10 per GB-month</td><td class="num">a few tags, &lt; 1 GB, ~$0.10</td></tr>
+          <tr><td class="k">ECR pulls</td><td>$0 within the same region</td><td class="num">every deploy, free</td></tr>
+          <tr class="sum"><td>Net new cost</td><td>essentially the cost of storing a few images</td><td class="num zero">about $1 / month</td></tr>
+        </tbody>
+      </table>
+      <div class="callout plan">The build minutes are already covered by what we use today, and same-region pulls are free, so Stage 2 adds little more than the storage for a handful of container images.</div>
+    </div>
+  </section>
+
+  <!-- 6c STAGE 2 PROMOTION + HOTFIXES -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="overline plan">01 &middot; CI/CD, proposed</div>
+      <h2>Promotion and hotfixes</h2>
+      <div class="cols">
+        <div class="col pick"><h3>Promotion: staging to prod</h3>
+          <ul class="clean">
+            <li>CI builds <b>one image per commit</b>, tagged by git SHA (immutable)</li>
+            <li>That image is deployed to UAT and tested there</li>
+            <li>Production deploys the <b>exact same image</b> that passed UAT, with no rebuild</li>
+            <li>What we tested is bit for bit what ships</li>
+          </ul>
+        </div>
+        <div class="col plan"><h3>Hotfixes</h3>
+          <ul class="clean plan">
+            <li>Fix on a branch, CI builds a new tagged image, deploy to prod</li>
+            <li>If it misbehaves, <b>roll back to the previous tag in seconds</b></li>
+            <li>Every image is versioned, so rollback never means a rebuild</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout plan">The discipline is the same either way: build once, promote the tested artifact, and keep a known-good tag one command away. That is what makes both routine deploys and urgent hotfixes safe.</div>
     </div>
   </section>
 
@@ -436,7 +479,7 @@
 <div class="brandbar">Nazrani &middot; Deployment &amp; Cost Review</div>
 <nav class="controls">
   <button id="prev" type="button" aria-label="Previous slide">&lsaquo; Prev</button>
-  <span id="counter">1 / 14</span>
+  <span id="counter">1 / 16</span>
   <button id="next" type="button" aria-label="Next slide">Next &rsaquo;</button>
 </nav>
 <div class="progress"><div id="bar"></div></div>
