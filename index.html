@@ -333,15 +333,28 @@
           <tr class="sum"><td>Net, what leaves the account</td><td class="num zero">about $0.00</td><td class="bar-td"></td></tr>
         </tbody>
       </table>
-      <div class="group-label">Where the $40.50 of usage goes</div>
+      <p class="cap"><strong>Credits cover 100% of usage today,</strong> so net spend is about $0. The figure that matters long term is the gross run rate, about $70/mo all in. The full per-product breakdown is next.</p>
+    </div>
+  </section>
+
+  <!-- COST: BREAKDOWN -->
+  <section class="slide">
+    <div class="wrap">
+      <div class="overline">02 &middot; Cost</div>
+      <h2>Where the $40.50 of usage goes</h2>
       <table>
+        <thead><tr><th>Line item</th><th class="num">MTD</th><th class="bar-td">Share</th></tr></thead>
         <tbody>
           <tr><td><b>EC2 instance</b> <span class="mono" style="color:var(--faint)">c7i-flex.large</span></td><td class="num">$32.18</td><td class="bar-td"><div class="bar"><i style="width:79%"></i></div></td></tr>
-          <tr><td>EBS disk and Public IPv4</td><td class="num">$3.83</td><td class="bar-td"><div class="bar"><i style="width:10%"></i></div></td></tr>
-          <tr><td>Amplify, Route 53, S3, misc</td><td class="num">$4.49</td><td class="bar-td"><div class="bar"><i style="width:11%"></i></div></td></tr>
+          <tr><td>EBS disk &middot; 40 GB gp3</td><td class="num">$1.92</td><td class="bar-td"><div class="bar"><i style="width:5%"></i></div></td></tr>
+          <tr><td>Public IPv4 &middot; Elastic IP</td><td class="num">$1.91</td><td class="bar-td"><div class="bar"><i style="width:5%"></i></div></td></tr>
+          <tr><td>Amplify &middot; builds + SSR</td><td class="num">$3.48</td><td class="bar-td"><div class="bar"><i style="width:9%"></i></div></td></tr>
+          <tr><td>Route 53 &middot; DNS</td><td class="num">$1.01</td><td class="bar-td"><div class="bar"><i style="width:2%"></i></div></td></tr>
+          <tr><td>S3 / Secrets / misc</td><td class="num">$0.02</td><td class="bar-td"><div class="bar"><i style="width:1%"></i></div></td></tr>
+          <tr class="sum"><td>EC2 ecosystem (instance + disk + IP)</td><td class="num">$36.01</td><td class="bar-td"><b style="color:var(--plan)">89%</b></td></tr>
         </tbody>
       </table>
-      <p class="cap"><strong>Credits cover 100% of usage today,</strong> so net spend is about $0. The figure that matters long term is the gross run rate (about $70/mo all in), and one always-on instance is <strong>89%</strong> of it.</p>
+      <p class="cap">Nothing is leaking or misconfigured. It is simply <strong>one always-on instance</strong> dominating the bill, and everything else is pennies at our scale.</p>
     </div>
   </section>
 
@@ -423,7 +436,7 @@
 <div class="brandbar">Nazrani &middot; Deployment &amp; Cost Review</div>
 <nav class="controls">
   <button id="prev" type="button" aria-label="Previous slide">&lsaquo; Prev</button>
-  <span id="counter">1 / 13</span>
+  <span id="counter">1 / 14</span>
   <button id="next" type="button" aria-label="Next slide">Next &rsaquo;</button>
 </nav>
 <div class="progress"><div id="bar"></div></div>
