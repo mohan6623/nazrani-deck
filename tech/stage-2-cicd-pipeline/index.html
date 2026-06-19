@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nazrani Stage 2 CI/CD Pipeline</title>
+  <style>
+    :root {
+      --ink: #10241d;
+      --ink-soft: #496057;
+      --paper: #f7f2e8;
+      --paper-2: #fffaf0;
+      --line: #d7c8aa;
+      --green: #174d38;
+      --green-2: #0f3829;
+      --mint: #dceee5;
+      --gold: #b4873b;
+      --gold-soft: #f0dfbc;
+      --blue: #244a73;
+      --blue-soft: #dce8f5;
+      --red: #8f2d2d;
+      --red-soft: #f4dddd;
+      --shadow: 0 20px 60px rgba(24, 39, 31, 0.14);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(180, 135, 59, 0.20), transparent 34rem),
+        radial-gradient(circle at 92% 16%, rgba(23, 77, 56, 0.16), transparent 28rem),
+        linear-gradient(135deg, #fbf6ec, #efe4cf);
+      font-family: "Aptos", "Segoe UI", Tahoma, sans-serif;
+      line-height: 1.5;
+    }
+
+    .page {
+      width: min(1380px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 38px 0 64px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(180, 135, 59, 0.28);
+      border-radius: 32px;
+      padding: 34px;
+      background:
+        linear-gradient(135deg, rgba(255, 250, 240, 0.96), rgba(246, 237, 219, 0.90)),
+        repeating-linear-gradient(90deg, rgba(23, 77, 56, 0.04), rgba(23, 77, 56, 0.04) 1px, transparent 1px, transparent 34px);
+      box-shadow: var(--shadow);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -110px;
+      top: -150px;
+      width: 360px;
+      height: 360px;
+      border-radius: 50%;
+      border: 72px solid rgba(180, 135, 59, 0.12);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      padding: 7px 12px;
+      border: 1px solid rgba(23, 77, 56, 0.18);
+      border-radius: 999px;
+      color: var(--green);
+      background: rgba(220, 238, 229, 0.62);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 850px;
+      margin: 18px 0 10px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(38px, 6vw, 82px);
+      line-height: 0.94;
+      letter-spacing: -0.05em;
+    }
+
+    .hero p {
+      max-width: 760px;
+      margin: 0;
+      color: var(--ink-soft);
+      font-size: 18px;
+    }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin: 22px 0 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .legend-item {
+      border: 1px solid rgba(16, 36, 29, 0.10);
+      border-radius: 18px;
+      padding: 14px 16px;
+      background: rgba(255, 250, 240, 0.72);
+    }
+
+    .legend-item strong {
+      display: block;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .legend-item span {
+      color: var(--ink-soft);
+      font-size: 13px;
+    }
+
+    .board {
+      margin-top: 28px;
+      display: grid;
+      gap: 22px;
+    }
+
+    .lane {
+      border: 1px solid rgba(16, 36, 29, 0.10);
+      border-radius: 28px;
+      background: rgba(255, 250, 240, 0.82);
+      box-shadow: 0 14px 42px rgba(24, 39, 31, 0.09);
+      overflow: hidden;
+    }
+
+    .lane-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 22px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--green-2), var(--green));
+    }
+
+    .lane.hotfix .lane-head {
+      background: linear-gradient(135deg, #683220, var(--gold));
+    }
+
+    .lane.prod .lane-head {
+      background: linear-gradient(135deg, #182c4b, var(--blue));
+    }
+
+    .lane-title {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      font-size: 20px;
+      font-weight: 850;
+    }
+
+    .lane-index {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+    }
+
+    .lane-note {
+      max-width: 520px;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 14px;
+      text-align: right;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(150px, 1fr));
+      gap: 18px;
+      padding: 24px;
+    }
+
+    .flow.five {
+      grid-template-columns: repeat(5, minmax(150px, 1fr));
+    }
+
+    .flow.four {
+      grid-template-columns: repeat(4, minmax(150px, 1fr));
+    }
+
+    .step {
+      position: relative;
+      min-height: 154px;
+      border: 1px solid rgba(16, 36, 29, 0.12);
+      border-radius: var(--radius);
+      padding: 17px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 250, 240, 0.96));
+      box-shadow: 0 10px 28px rgba(16, 36, 29, 0.07);
+    }
+
+    .step::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -18px;
+      width: 18px;
+      border-top: 2px solid rgba(23, 77, 56, 0.32);
+    }
+
+    .step::before {
+      content: "";
+      position: absolute;
+      top: calc(50% - 5px);
+      right: -20px;
+      width: 10px;
+      height: 10px;
+      border-top: 2px solid rgba(23, 77, 56, 0.40);
+      border-right: 2px solid rgba(23, 77, 56, 0.40);
+      transform: rotate(45deg);
+    }
+
+    .step:last-child::before,
+    .step:last-child::after {
+      display: none;
+    }
+
+    .tag {
+      display: inline-flex;
+      width: fit-content;
+      margin-bottom: 12px;
+      border-radius: 999px;
+      padding: 5px 9px;
+      color: var(--green);
+      background: var(--mint);
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+    }
+
+    .hotfix .tag {
+      color: #6a3a0f;
+      background: var(--gold-soft);
+    }
+
+    .prod .tag {
+      color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .step h2 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      line-height: 1.13;
+      letter-spacing: -0.02em;
+    }
+
+    .step p {
+      margin: 0;
+      color: var(--ink-soft);
+      font-size: 13.5px;
+    }
+
+    code {
+      display: inline-block;
+      border: 1px solid rgba(16, 36, 29, 0.10);
+      border-radius: 8px;
+      padding: 1px 6px;
+      color: #173629;
+      background: #f5ecd9;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    .branch-map {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 22px;
+    }
+
+    .panel {
+      border: 1px solid rgba(16, 36, 29, 0.10);
+      border-radius: 28px;
+      padding: 24px;
+      background: rgba(255, 250, 240, 0.80);
+      box-shadow: 0 14px 42px rgba(24, 39, 31, 0.08);
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 28px;
+      letter-spacing: -0.04em;
+    }
+
+    .rule-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .rule {
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(220, 238, 229, 0.48);
+    }
+
+    .rule strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .rule span {
+      color: var(--ink-soft);
+      font-size: 13px;
+    }
+
+    .rail {
+      display: grid;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .rail-row {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .rail-row b {
+      border-radius: 999px;
+      padding: 7px 10px;
+      color: #fff;
+      background: var(--green);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .rail-row span {
+      border-bottom: 1px dashed rgba(16, 36, 29, 0.22);
+      padding-bottom: 7px;
+      color: var(--ink-soft);
+      font-size: 14px;
+    }
+
+    .footer-note {
+      margin: 24px 0 0;
+      color: var(--ink-soft);
+      text-align: center;
+      font-size: 13px;
+    }
+
+    @media (max-width: 1060px) {
+      .legend,
+      .branch-map {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .flow,
+      .flow.five,
+      .flow.four {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .step:nth-child(2n)::before,
+      .step:nth-child(2n)::after {
+        display: none;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .page {
+        width: min(100% - 24px, 1380px);
+        padding-top: 18px;
+      }
+
+      .hero {
+        padding: 24px;
+      }
+
+      .legend,
+      .branch-map,
+      .rule-grid,
+      .flow,
+      .flow.five,
+      .flow.four {
+        grid-template-columns: 1fr;
+      }
+
+      .lane-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .lane-note {
+        text-align: left;
+      }
+
+      .step::before,
+      .step::after {
+        display: none;
+      }
+    }
+
+    @page {
+      size: A4 landscape;
+      margin: 10mm;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .page {
+        width: 100%;
+        padding: 0;
+      }
+
+      .hero,
+      .lane,
+      .panel {
+        box-shadow: none;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .hero,
+      .lane {
+        min-height: calc(100vh - 20mm);
+        break-after: page;
+        page-break-after: always;
+      }
+
+      .branch-map {
+        break-after: auto;
+        page-break-after: auto;
+      }
+
+      .step,
+      .rule,
+      .rail-row {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .footer-note {
+        margin-top: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-labelledby="page-title">
+      <span class="eyebrow">Nazrani Backend - Stage 2</span>
+      <h1 id="page-title">CI/CD pipeline map</h1>
+      <p>
+        Build once in GitHub Actions, store the Docker image in AWS ECR, pull the
+        exact image on EC2, and promote only approved artifacts to production.
+      </p>
+
+      <div class="legend" aria-label="Pipeline legend">
+        <div class="legend-item">
+          <strong>Green lane</strong>
+          <span>Normal staging to UAT deployment.</span>
+        </div>
+        <div class="legend-item">
+          <strong>Gold lane</strong>
+          <span>Hotfix image build and temporary UAT testing.</span>
+        </div>
+        <div class="legend-item">
+          <strong>Blue lane</strong>
+          <span>Manual production promotion after approval.</span>
+        </div>
+        <div class="legend-item">
+          <strong>ECR</strong>
+          <span>The image registry and rollback source.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="board" aria-label="Stage 2 deployment flows">
+      <article class="lane">
+        <header class="lane-head">
+          <div class="lane-title"><span class="lane-index">01</span> Normal UAT Flow</div>
+          <div class="lane-note">Automatic after a deliberate promotion to <code>staging</code>.</div>
+        </header>
+        <div class="flow">
+          <div class="step">
+            <span class="tag">Source</span>
+            <h2>Feature branch</h2>
+            <p>Work starts from <code>develop</code>. The branch is tested and gated before integration.</p>
+          </div>
+          <div class="step">
+            <span class="tag">Integrate</span>
+            <h2>Merge to develop</h2>
+            <p><code>develop</code> stays shippable. Integration is not automatically a release.</p>
+          </div>
+          <div class="step">
+            <span class="tag">Release</span>
+            <h2>Promote to staging</h2>
+            <p>Use <code>git merge --no-ff</code>. No squash on shared branches.</p>
+          </div>
+          <div class="step">
+            <span class="tag">Build</span>
+            <h2>GitHub Actions</h2>
+            <p><code>deploy.yml</code> builds the Docker image on the GitHub runner.</p>
+          </div>
+          <div class="step">
+            <span class="tag">Store</span>
+            <h2>Push to ECR</h2>
+            <p>Push <code>sha-&lt;short_sha&gt;</code> and update <code>uat-staging</code>.</p>
+          </div>
+          <div class="step">
+            <span class="tag">Run</span>
+            <h2>EC2 pulls image</h2>
+            <p>EC2 logs in with IAM, runs <code>docker-compose.deploy.yml</code>, then checks UAT health.</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="lane hotfix">
+        <header class="lane-head">
+          <div class="lane-title"><span class="lane-index">02</span> Hotfix Candidate Flow</div>
+          <div class="lane-note">Builds candidates only. UAT deployment remains manual.</div>
+        </header>
+        <div class="flow five">
+          <div class="step">
+            <span class="tag">Branch</span>
+            <h2>hotfix/*</h2>
+            <p>Create the hotfix branch from <code>main</code>, not from active development.</p>
+          </div>
+          <div class="step">
+            <span class="tag">Build</span>
+            <h2>build-hotfix.yml</h2>
+            <p>GitHub Actions builds the image but does not replace UAT automatically.</p>
+          </div>
+          <div class="step">
+            <span class="tag">Tags</span>
+            <h2>Candidate image</h2>
+            <p>Push <code>sha-*</code> plus <code>hotfix-name-sha</code> to ECR.</p>
+          </div>
+          <div class="step">
+            <span class="tag">Manual</span>
+            <h2>Deploy to UAT</h2>
+            <p>Run <code>deploy.yml</code> manually with the exact hotfix image tag.</p>
+          </div>
+          <div class="step">
+            <span class="tag">Restore</span>
+            <h2>Return UAT</h2>
+            <p>After testing, deploy <code>uat-staging</code> to restore the normal staging image.</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="lane prod">
+        <header class="lane-head">
+          <div class="lane-title"><span class="lane-index">03</span> Production Promotion Flow</div>
+          <div class="lane-note">Manual, exact-image promotion. No rebuild during production release.</div>
+        </header>
+        <div class="flow five">
+          <div class="step">
+            <span class="tag">Approve</span>
+            <h2>UAT passes</h2>
+            <p>Choose the exact image tag that was tested on <code>uat.api.nazrani.com</code>.</p>
+          </div>
+          <div class="step">
+            <span class="tag">Source</span>
+            <h2>Merge to main</h2>
+            <p><code>main</code> records the production source truth, but does not auto-deploy.</p>
+          </div>
+          <div class="step">
+            <span class="tag">Manual</span>
+            <h2>Promote workflow</h2>
+            <p>Operator enters <code>image_tag</code> and <code>version</code>.</p>
+          </div>
+          <div class="step">
+            <span class="tag">Health</span>
+            <h2>api.nazrani.com</h2>
+            <p>Production health must pass before release tagging happens.</p>
+          </div>
+          <div class="step">
+            <span class="tag">Release</span>
+            <h2>vX.Y.Z tag</h2>
+            <p>Create the version tag only after the production container is healthy.</p>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="branch-map" aria-label="Rules and tag map">
+      <article class="panel">
+        <h2>Release rules</h2>
+        <div class="rule-grid">
+          <div class="rule">
+            <strong>Build once</strong>
+            <span>Production receives an approved image, not a freshly rebuilt one.</span>
+          </div>
+          <div class="rule">
+            <strong>No shared-branch squash</strong>
+            <span>Use <code>--no-ff</code> so ancestry and UAT tags remain meaningful.</span>
+          </div>
+          <div class="rule">
+            <strong>UAT moves fast</strong>
+            <span><code>uat-staging</code> is mutable and always points at the current UAT build.</span>
+          </div>
+          <div class="rule">
+            <strong>Production is deliberate</strong>
+            <span>Manual approval, exact image, health check, then version tag.</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <h2>Image tags</h2>
+        <div class="rail">
+          <div class="rail-row">
+            <b>sha-*</b>
+            <span>Immutable rollback anchor for every build.</span>
+          </div>
+          <div class="rail-row">
+            <b>uat</b>
+            <span><code>uat-staging</code> is mutable and deploys the latest staging image.</span>
+          </div>
+          <div class="rail-row">
+            <b>hotfix</b>
+            <span><code>hotfix-branch-sha</code> identifies a candidate image.</span>
+          </div>
+          <div class="rail-row">
+            <b>vX.Y.Z</b>
+            <span>Production release label, created only after prod health passes.</span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <p class="footer-note">
+      Stage 2 scope: UAT ECR deployment and hotfix candidate builds. Production promotion depends on the later UAT/prod stack split.
+    </p>
+  </main>
+</body>
+</html>

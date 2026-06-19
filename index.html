@@ -64,6 +64,8 @@
 
   .pill{display:inline-flex; align-items:center; gap:.5rem; font:600 .75rem/1 var(--mono); letter-spacing:.04em;
     padding:.48rem .78rem; border-radius:999px; border:1px solid var(--line2); color:var(--muted); white-space:nowrap}
+  a.pill{text-decoration:none; transition:border-color .18s ease, color .18s ease, transform .18s ease}
+  a.pill:hover{color:var(--text); border-color:var(--ext); transform:translateY(-1px)}
   .pill .dot{width:8px; height:8px; border-radius:50%; background:var(--faint)}
   .pill.live{color:#bdeedd; border-color:var(--live-dim); background:rgba(52,211,154,.07)} .pill.live .dot{background:var(--live); box-shadow:0 0 10px var(--live)}
   .pill.plan{color:#f3dcae; border-color:var(--plan-dim); background:rgba(243,177,78,.07)} .pill.plan .dot{background:var(--plan); box-shadow:0 0 10px var(--plan)}
@@ -170,6 +172,7 @@
         <span class="pill live"><span class="dot"></span>UAT live</span>
         <span class="pill plan"><span class="dot"></span>Production next</span>
         <span class="pill"><span class="dot"></span>ap-south-1 &middot; Mumbai</span>
+        <a class="pill ext" href="./tech/stage-2-cicd-pipeline/" target="_blank" rel="noopener"><span class="dot"></span>Technical flow</a>
       </div>
       <div class="by">Presented by Mohan &middot; 17 June 2026</div>
     </div>
